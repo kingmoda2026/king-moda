@@ -1,47 +1,42 @@
 import streamlit as st
 from supabase import create_client
+import os
 
-# إعدادات الاتصال بمشروعك في Supabase
-SUPABASE_URL = "https://amodgmkhqkqmrpxcgizq.supabase.co"
-SUPABASE_KEY = "sb_publishable_ZVeDmY_U7TONHOnf4V4JIg_yQ7FEIBh"
+# إعداد Supabase
+supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
-# إنشاء الاتصال بقاعدة البيانات
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# نظام إدارة الجلسة (Session)
+if 'user' not in st.session_state:
+    st.session_state.user = None
 
-# عنوان صفحة المسوقين
-st.title("🛍️ كينج موضة - تسجيل أوردر جديد")
-
-# نموذج إدخال بيانات الأوردر
-with st.form("order_form", clear_on_submit=True):
-    marketer = st.text_input("اسم المسوقة")
-    model = st.text_input("اسم الموديل")
+def main():
+    st.title("🚀 نظام كينج موضة الاحترافي")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        size = st.text_input("المقاس")
-    with col2:
-        color = st.text_input("اللون")
-        
-    pieces = st.number_input("إجمالي عدد القطع", min_value=1, step=1)
-    
-    submit_button = st.form_submit_button("تسجيل الأوردر")
+    # واجهة تسجيل الدخول
+    if not st.session_state.user:
+        tab1, tab2 = st.tabs(["تسجيل دخول", "إنشاء حساب"])
+        with tab1:
+            email = st.text_input("البريد الإلكتروني")
+            password = st.text_input("كلمة المرور", type="password")
+            if st.button("دخول"):
+                # هنا نضيف منطق التحقق من Supabase Auth
+                st.success("تم الدخول بنجاح!")
+                st.session_state.user = email
+                st.rerun()
+        return
 
-# معالجة البيانات بعد الضغط على الزر
-if submit_button:
-    if marketer and model:
-        data = {
-            "marketer_name": marketer,
-            "model_name": model,
-            "size": size,
-            "color": color,
-            "total_pieces": pieces,
-            "status": "معلق"
-        }
-        try:
-            # إرسال البيانات لجدول orders في Supabase
-            supabase.table("orders").insert(data).execute()
-            st.success("تم تسجيل الأوردر بنجاح! 🎉")
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء التسجيل: {e}")
+    # واجهة التطبيق بعد الدخول
+    st.sidebar.write(f"مرحباً: {st.session_state.user}")
+    if st.sidebar.button("خروج"):
+        st.session_state.user = None
+        st.rerun()
+
+    # لوحة تحكم الأدمن (تظهر فقط إذا كان الإيميل هو إيميلك)
+    if st.session_state.user == "admin@kingmoda.com":
+        st.subheader("🛠 لوحة تحكم الأدمن")
+        # هنا ستظهر جداول الأوردرات وطلبات السحب
     else:
-        st.warning("يرجى ملء البيانات المطلوبة (الاسم والموديل).")
+        st.subheader("🛍 تسجيل أوردر جديد")
+        # هنا ستظهر خانات إدخال الأوردر (اسم العميل، العنوان، الخ...)
+        
+main()
