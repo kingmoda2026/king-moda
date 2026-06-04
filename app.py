@@ -1,66 +1,55 @@
 import streamlit as st
 from supabase import create_client
 
-# إعداد Supabase
-supabase = create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
+# إعداد الاتصال
+url = st.secrets["SUPABASE_URL"]
+key = st.secrets["SUPABASE_KEY"]
+supabase = create_client(url, key)
+
+st.title("🛍 نظام كينج موضة الاحترافي")
 
 # إدارة الجلسة
 if 'user' not in st.session_state:
     st.session_state.user = None
     st.session_state.is_admin = False
 
-def main():
-    st.title("🛍 نظام كينج موضة الاحترافي")
-
-    # واجهة تسجيل الدخول
-    if not st.session_state.user:
-        choice = st.selectbox("اختر الإجراء", ["تسجيل دخول", "إنشاء حساب"])
-        email = st.text_input("البريد الإلكتروني")
+# واجهة الدخول
+if not st.session_state.user:
+    tab1, tab2 = st.tabs(["دخول المسوقين", "إنشاء حساب جديد"])
+    
+    with tab1:
+        email = st.text_input("البريد الإلكتروني للدخول")
         password = st.text_input("كلمة المرور", type="password")
-        
-        if st.button("تنفيذ"):
-            if choice == "تسجيل دخول":
-                # تسجيل الدخول
-                auth_res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if st.button("دخول"):
+            # البحث عن المستخدم في جدول profiles مباشرة
+            user = supabase.table("profiles").select("*").eq("email", email).eq("password", password).execute()
+            if user.data:
                 st.session_state.user = email
-                # التحقق إذا كان أدمن (استبدل بالإيميل الخاص بك)
-                if email == "admin@kingmoda.com": 
+                if email == "admin@kingmoda.com": # إيميلك كأدمن
                     st.session_state.is_admin = True
                 st.rerun()
             else:
-                # إنشاء حساب
-                supabase.auth.sign_up({"email": email, "password": password})
-                st.success("تم إنشاء الحساب! سجل دخول الآن.")
+                st.error("بيانات الدخول غير صحيحة!")
 
-    # بعد تسجيل الدخول
-    else:
-        st.sidebar.write(f"مرحباً: {st.session_state.user}")
-        if st.sidebar.button("خروج"):
-            st.session_state.user = None
-            st.rerun()
+    with tab2:
+        new_email = st.text_input("البريد الإلكتروني الجديد")
+        new_pass = st.text_input("كلمة مرور جديدة", type="password")
+        if st.button("إنشاء حساب"):
+            # إضافة المسوق للجدول مباشرة
+            supabase.table("profiles").insert({
+                "email": new_email,
+                "password": new_pass,
+                "role": "marketer"
+            }).execute()
+            st.success("تم إنشاء حسابك! يمكنك تسجيل الدخول الآن.")
 
-        # لوحة تحكم الأدمن
-        if st.session_state.is_admin:
-            st.subheader("🛠 لوحة تحكم الأدمن")
-            orders = supabase.table("orders").select("*").execute()
-            st.table(orders.data)
-        
-        # واجهة المسوق
-        else:
-            st.subheader("🛍 تسجيل أوردر جديد")
-            with st.form("order_form"):
-                cust_name = st.text_input("اسم العميل")
-                phone = st.text_input("رقم التليفون")
-                addr = st.text_input("العنوان")
-                model = st.text_input("اسم الموديل")
-                if st.form_submit_button("تسجيل الأوردر"):
-                    supabase.table("orders").insert({
-                        "customer_name": cust_name,
-                        "customer_phone": phone,
-                        "customer_address": addr,
-                        "model_name": model
-                    }).execute()
-                    st.success("تم تسجيل الأوردر بنجاح!")
-
-if __name__ == "__main__":
-    main()
+# لوحة التحكم بعد الدخول
+else:
+    st.write(f"مرحباً بك: {st.session_state.user}")
+    if st.button("خروج"):
+        st.session_state.user = None
+        st.rerun()
+    
+    # واجهة تسجيل الأوردرات
+    st.subheader("🛍 تسجيل أوردر جديد")
+    # (هنا تكمل كود تسجيل الأوردرات كما في السابق)
